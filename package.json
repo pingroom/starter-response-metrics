@@ -1,0 +1,17 @@
+{
+  "name": "pingroom-starter-response-metrics",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Measure an explicit cohort of PingRoom questions with a read-only, validated snapshot.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/main.js scan",
+    "inspect": "node src/main.js inspect",
+    "report": "node src/main.js report",
+    "demo": "node src/demo.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": { "@pingroom/sdk": "0.6.0" }
+}

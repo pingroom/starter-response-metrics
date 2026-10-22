@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "roomCode": "DEMO01",
+  "askingRegistrationId": "10000000-0000-4000-8000-000000000001",
+  "targetSeconds": 120,
+  "questionIds": ["20000000-0000-4000-8000-000000000001"]
+}
