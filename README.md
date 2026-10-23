@@ -50,7 +50,7 @@ Set both `PINGROOM_TOKEN` and `PINGROOM_ROOM` in your scheduler's secret store t
 | `scanStartedAt`, `scanCompletedAt` | The interval in which the question reads took place. |
 | `cohortHash`, `scopeHash` | Local identifiers binding the manifest and the manifest-plus-credential scope. Neither contains the token itself. |
 
-p50 and p95 use the **nearest-rank** definition: sort the answered latencies and select rank `ceil(p × n)`, starting at rank 1. With two answers, p50 is the smaller and p95 is the larger. If no questions were answered, all latency statistics are `null`, not zero. Timestamps are normalized to UTC with millisecond precision. At that precision, answered and cancelled questions must resolve no later than expiry, and expired questions must resolve exactly at expiry.
+p50 and p95 use the **nearest-rank** definition: sort the answered latencies and select rank `ceil(p × n)`, starting at rank 1. With two answers, p50 is the smaller and p95 is the larger. If no questions were answered, all latency statistics are `null`, not zero. Timestamps are normalized to UTC with millisecond precision. At that precision, answered and cancelled questions must resolve no later than expiry. Expired questions may resolve at or after their deadline, but never after the observation time.
 
 These are creation-to-server-answer timings, **not phone delivery, notification reading, or attention times**. Cancelled and expired questions do not become zero-duration answers. Pending questions have unknown eventual latency and are excluded from percentiles. The target count is not an SLA compliance rate; the chosen cohort may omit other questions, and pending outcomes can change. Keep the machine clock synchronized, particularly for pending ages.
 

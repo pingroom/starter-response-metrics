@@ -71,11 +71,11 @@ function validateTimes(row) {
     if (row.answeredAt === null || row.resolvedAt !== row.answeredAt) fail('Answered question lacks matching server answer/resolution timestamps.');
   } else {
     if (row.answeredAt !== null || row.resolvedAt === null) fail('Unanswered terminal question has inconsistent timestamps.');
-    if (row.state === 'expired' && row.resolvedAt !== row.expiresAt) fail('Expired question must resolve at its expiry timestamp.');
+    if (row.state === 'expired' && Date.parse(row.resolvedAt) < expires) fail('Expired question cannot resolve before its expiry timestamp.');
   }
   if (row.resolvedAt !== null && (Date.parse(row.resolvedAt) < created || Date.parse(row.resolvedAt) > observed)) fail('Question resolution is outside the observed time interval.');
   // Equality is accepted at the millisecond precision used by this report.
-  if (row.resolvedAt !== null && Date.parse(row.resolvedAt) > expires) fail('Question resolution is after its expiry timestamp.');
+  if (row.state !== 'expired' && row.resolvedAt !== null && Date.parse(row.resolvedAt) > expires) fail('Question resolution is after its expiry timestamp.');
   return row;
 }
 

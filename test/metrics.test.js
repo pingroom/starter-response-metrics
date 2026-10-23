@@ -109,13 +109,56 @@ test('invalid timestamps never become latency samples', async (t) => {
   assert.equal(timestamp('2026-10-22T15:00:00.123456+03:00'), '2026-10-22T12:00:00.123Z');
 });
 
-test('expired resolves at its deadline; cancellation is a distinct terminal state', async (t) => {
+test('expired cannot resolve before its deadline; cancellation is a distinct terminal state', async (t) => {
   const expired = question(1, 'expired');
   await assert.rejects(run(await workspace(t), [{ ...expired, resolved_at: '2026-10-22T11:58:59Z' }]));
   const result = report(await run(await workspace(t), [question(1, 'cancelled')]));
   assert.equal(result.counts.cancelled, 1);
   assert.equal(result.counts.expired, 0);
 });
+
+test('delayed expiry updates counts without adding latency samples and rescans remain stable', async (t) => {
+  const directory = await workspace(t);
+  const pending = question(2, 'pending'); pending.expires_at = '2026-10-22T11:59:00+00:00';
+  const questions = [question(1, 'answered', 30), pending];
+  const initial = report(await run(directory, questions));
+  pending.state = 'expired'; pending.resolved_at = '2026-10-22T11:59:30+00:00';
+  const mock = mockFetch(questions);
+  const result = report(await run(directory, questions, { transport: mock.transport }));
+  assert.deepEqual(result.counts, { pending: 0, answered: 1, expired: 1, cancelled: 0 });
+  assert.deepEqual(result.answeredLatencyMs, initial.answeredLatencyMs);
+  assert.equal(result.answeredWithinTargetCount, 1);
+  assert.equal(result.pendingBeyondTargetAtObservationCount, 0);
+  assert.deepEqual(report(await localReport(directory)), result);
+  const before = await readFile(join(directory, 'snapshot.json'));
+  assert.deepEqual(report(await run(directory, questions, { transport: mock.transport })), result);
+  assert.equal(mock.calls.length, 4);
+  assert.deepEqual(await readFile(join(directory, 'snapshot.json')), before);
+});
+
+for (const [name, resolvedAt] of [
+  ['before its deadline', '2026-10-22T11:58:59.999Z'],
+  ['after observation', '2026-10-22T12:00:00.001Z'],
+]) {
+  test(`expired resolution ${name} preserves the snapshot and fails saved replay`, async (t) => {
+    const directory = await workspace(t);
+    const q = question(1, 'pending'); q.expires_at = '2026-10-22T11:59:00Z';
+    await run(directory, [q]);
+    const before = await readFile(join(directory, 'snapshot.json'));
+    q.state = 'expired'; q.resolved_at = resolvedAt;
+    await assert.rejects(run(directory, [q]));
+    assert.deepEqual(await readFile(join(directory, 'snapshot.json')), before);
+    const saved = JSON.parse(before);
+    Object.assign(saved.questions[0], { state: 'expired', resolvedAt });
+    await writeFile(join(directory, 'snapshot.json'), JSON.stringify(saved));
+    const corrupted = await readFile(join(directory, 'snapshot.json'));
+    await assert.rejects(localReport(directory));
+    const mock = mockFetch([q]);
+    await assert.rejects(run(directory, [q], { transport: mock.transport }));
+    assert.equal(mock.calls.length, 0);
+    assert.deepEqual(await readFile(join(directory, 'snapshot.json')), corrupted);
+  });
+}
 
 test('late answer/cancellation is rejected in API reads and saved snapshots', async (t) => {
   for (const state of ['answered', 'cancelled']) {
